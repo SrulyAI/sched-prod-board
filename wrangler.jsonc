@@ -1,10 +1,14 @@
-// Workers Static Assets only: no Worker script ("main"), no KV, no Workers Sites ("site").
-// Every request is a static asset request: free and unlimited on the Workers Free plan.
+// Static assets plus one small Worker that runs ONLY for /video/* (byte-range answers for the recording).
+// No KV, no Workers Sites ("site"), no other bindings. Asset requests stay free and unlimited;
+// /video/* requests count against the Workers Free plan's 100,000 requests/day.
 {
   "name": "sched-prod-board",
+  "main": "worker.js",
   "compatibility_date": "2026-11-01",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "404-page"
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/video/*"]
   }
 }
