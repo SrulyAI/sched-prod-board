@@ -1,4 +1,4 @@
-import { fetchIncidents, ack } from './api.js';
+import { fetchIncidents, ack, resetCursor } from './api.js';
 
 const REFRESH_MS = 2000; // R4
 
@@ -109,6 +109,8 @@ async function refresh() {
     status.textContent = `updated ${localTime(page.updatedAt)}`;
   } catch (err) {
     console.error(err);
+    // A rejected cursor: the API says to poll again without `since`.
+    if (String(err.message).startsWith('incidents: 400')) resetCursor();
     status.textContent = 'Could not reach the incident API. Retrying…';
   }
   setTimeout(refresh, Math.max(0, REFRESH_MS - (performance.now() - started))); // R4

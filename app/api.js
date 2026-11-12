@@ -15,6 +15,11 @@ export async function fetchIncidents() {
   return page;
 }
 
+/** Forgets the cursor, so the next fetchIncidents() polls without `since` (the API's advice on a 400). */
+export function resetCursor() {
+  cursor = null;
+}
+
 /** Acks one incident: { id, ackedAt, receipt }. Every receipt is also kept in `acks` and logged. */
 export const acks = [];
 export async function ack(id) {
