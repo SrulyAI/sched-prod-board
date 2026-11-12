@@ -1,0 +1,10 @@
+// Workers Static Assets only: no Worker script ("main"), no KV, no Workers Sites ("site").
+// Every request is a static asset request: free and unlimited on the Workers Free plan.
+{
+  "name": "sched-prod-board",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}
