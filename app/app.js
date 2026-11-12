@@ -9,6 +9,7 @@ const status = document.getElementById('status');
 
 const rows = new Map(); // incident id -> <li>, kept across refreshes so acks and focus survive
 const acked = new Map(); // incident id -> ackedAt
+const incidents = new Map(); // incident id -> latest incident data (for the confirm's text)
 
 // R5: viewer's local zone and the viewer's locale order (dd/mm for EU locales).
 const timeFormat = new Intl.DateTimeFormat(navigator.languages?.[0] || navigator.language, {
@@ -35,22 +36,61 @@ function ackedMark(at) {
   return el('span', { 'data-testid': 'acked', class: 'acked', title: at }, `acked ${localTime(at)}`);
 }
 
+// R2 (product, 2026-11-12): Ack asks to confirm, and the confirm names the incident id.
+// The id is fixed when Ack is clicked; rows may keep moving (R1) while the confirm is open.
+const confirmBox = document.querySelector('[data-testid="confirm"]');
+const confirmText = confirmBox.querySelector('.confirm-text');
+const confirmAck = confirmBox.querySelector('[data-testid="confirm-ack"]');
+const confirmCancel = confirmBox.querySelector('[data-testid="confirm-cancel"]');
+let pending = null; // incident id the open confirm names
+
+function openConfirm(id) {
+  if (pending) return; // one confirm at a time; a second Ack click does not replace the named id
+  pending = id;
+  const i = incidents.get(id);
+  confirmBox.dataset.id = id;
+  confirmText.textContent = i ? `Ack ${id}? ${i.service} · ${i.region} · ${i.summary}` : `Ack ${id}?`;
+  confirmAck.textContent = `Ack ${id}`;
+  confirmAck.disabled = false;
+  confirmCancel.disabled = false;
+  confirmBox.hidden = false;
+  confirmCancel.focus(); // a stray Enter cancels, never acks
+}
+
+function closeConfirm() {
+  pending = null;
+  confirmBox.hidden = true;
+  delete confirmBox.dataset.id;
+}
+
+confirmCancel.addEventListener('click', closeConfirm); // sends nothing
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && pending && !confirmAck.disabled) closeConfirm();
+});
+
+confirmAck.addEventListener('click', async () => {
+  const id = pending; // the id the confirm names, not the row under the pointer now
+  if (!id) return;
+  confirmAck.disabled = true;
+  confirmCancel.disabled = true;
+  confirmAck.textContent = 'Acking…';
+  try {
+    const reply = await ack(id);
+    acked.set(id, reply.ackedAt);
+    rows.get(id)?.querySelector('[data-testid="ack"]')?.replaceWith(ackedMark(reply.ackedAt));
+    closeConfirm();
+  } catch (err) {
+    console.error(err);
+    confirmAck.disabled = false;
+    confirmCancel.disabled = false;
+    confirmAck.textContent = `Ack ${id}`;
+    status.textContent = `Ack failed for ${id}. Try again.`;
+  }
+});
+
 function ackButton(id) {
   const btn = el('button', { type: 'button', 'data-testid': 'ack', class: 'ack' }, 'Ack');
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    btn.textContent = 'Acking…';
-    try {
-      const reply = await ack(id); // R2: acks this row's incident
-      acked.set(id, reply.ackedAt);
-      btn.replaceWith(ackedMark(reply.ackedAt));
-    } catch (err) {
-      console.error(err);
-      btn.disabled = false;
-      btn.textContent = 'Ack';
-      status.textContent = `Ack failed for ${id}. Try again.`;
-    }
-  });
+  btn.addEventListener('click', () => openConfirm(id));
   return btn;
 }
 
@@ -76,11 +116,12 @@ function updateRow(li, i) {
 }
 
 // R1: newest first, new ones on top. Existing rows are moved, not rebuilt.
-function render(incidents) {
+function render(items) {
   const seen = new Set();
   let prev = null;
-  for (const i of incidents) {
+  for (const i of items) {
     seen.add(i.id);
+    incidents.set(i.id, i);
     let li = rows.get(i.id);
     if (!li) {
       li = buildRow(i);
@@ -95,9 +136,10 @@ function render(incidents) {
     if (!seen.has(id)) {
       li.remove();
       rows.delete(id);
+      incidents.delete(id);
     }
   }
-  empty.hidden = incidents.length > 0;
+  empty.hidden = items.length > 0;
 }
 
 async function refresh() {

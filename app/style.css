@@ -13,5 +13,13 @@ h1 { margin: 0; font-size: 22px; }
 .ack { font: inherit; padding: 4px 14px; border: 1px solid #888; border-radius: 6px; background: #fff; cursor: pointer; }
 .ack:disabled { cursor: progress; color: #888; }
 .acked { color: #1a7f37; font-weight: 600; font-size: 13px; }
+.confirm { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(640px, calc(100vw - 32px)); box-sizing: border-box; padding: 14px 18px; background: #fff; border: 2px solid #1d1d1f; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.18); z-index: 10; }
+.confirm[hidden] { display: none; }
+.confirm-text { margin: 0 0 10px; font-weight: 600; overflow-wrap: anywhere; }
+.confirm-buttons { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm-buttons button { font: inherit; padding: 6px 16px; border-radius: 6px; cursor: pointer; }
+.confirm-cancel { border: 1px solid #888; background: #fff; }
+.confirm-ack { border: 1px solid #1a7f37; background: #1a7f37; color: #fff; }
+.confirm-buttons button:disabled { cursor: progress; opacity: .6; }
 footer { color: #777; font-size: 13px; }
 footer code { font-family: ui-monospace, monospace; }
